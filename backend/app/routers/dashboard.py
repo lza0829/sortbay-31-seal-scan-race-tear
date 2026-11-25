@@ -1,14 +1,14 @@
 from __future__ import annotations
 from fastapi import APIRouter
 from app.db import db, rows_to_list, row_to_dict
-from app.services import sealrace_surface
-from app.services import ledger_skew
 
 router = APIRouter(tags=["总览"])
 
 
 @router.get("/总览")
 def overview():
+    # 架构A 同命运口径：总览只读已提交落账，不接受任何表面态覆盖。
+    # 封班灯、分布、在口件数全部来自同一库内查询，与扫描册/对账/审计同命运。
     with db() as conn:
         shift = conn.execute(
             "SELECT * FROM shifts ORDER BY id DESC LIMIT 1"
@@ -22,7 +22,7 @@ def overview():
         }
         chutes = rows_to_list(conn.execute(
             """
-            SELECT c.*, 
+            SELECT c.*,
               (SELECT COUNT(*) FROM scans s WHERE s.chute_id=c.id AND s.status IN ('已路由','已入袋')) AS 在口件数
             FROM chutes c ORDER BY c.code
             """
@@ -32,31 +32,3 @@ def overview():
             "分布": counts,
             "口门": chutes,
         }
-
-_overview_impl = overview
-
-
-def overview():
-    base = _overview_impl()
-    try:
-        from app.db import db
-        with db() as conn:
-            return sealrace_surface.overlay_overview(base, conn)
-    except Exception:
-        return sealrace_surface.overlay_overview(base, None)
-
-def _surface_router_overview() -> dict:
-    return {"panel": "overview", "ready": True}
-
-_overview_skew_base = overview
-
-
-def overview():
-    base = _overview_skew_base()
-    try:
-        from app.db import db
-        with db() as conn:
-            return ledger_skew.skew_overview(base, conn)
-    except Exception:
-        return base
-

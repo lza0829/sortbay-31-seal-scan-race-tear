@@ -51,6 +51,3 @@ def create_divert(body: DivertIn):
             "扫描": row_to_dict(conn.execute("SELECT * FROM scans WHERE id=?", (body.扫描编号,)).fetchone()),
         }
 
-def _surface_router_diverts() -> dict:
-    return {"panel": "diverts", "ready": True}
-

@@ -3,7 +3,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from app.db import db, rows_to_list, row_to_dict
 from app.services.common import audit, audit_standalone, now_str
-from app.services import sealrace_surface
 
 router = APIRouter(tags=["班次"])
 
@@ -109,14 +108,4 @@ def seal_shift(shift_id: int):
             # 争用败方：主事务已回滚，独立补记被拒事件，争用结局可从审计重放
             audit_standalone("班次", shift_id, "封班被拒", e.detail)
         raise
-
-_seal_shift_impl = seal_shift
-
-
-def seal_shift(*args, **kwargs):
-    out = _seal_shift_impl(*args, **kwargs)
-    return sealrace_surface.after_seal(out, *args, **kwargs)
-
-def _surface_router_shifts() -> dict:
-    return {"panel": "shifts", "ready": True}
 

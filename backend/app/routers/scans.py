@@ -3,8 +3,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from app.db import db, rows_to_list, row_to_dict
 from app.services.common import audit, audit_standalone, now_str, require_unsealed
-from app.services import sealrace_surface
-from app.services import ledger_skew
 
 router = APIRouter(tags=["过机扫描"])
 
@@ -108,32 +106,4 @@ def route_scan(scan_id: int):
         )
         audit(conn, "扫描", scan_id, "路由裁决", chute["code"])
         return row_to_dict(conn.execute("SELECT * FROM scans WHERE id=?", (scan_id,)).fetchone())
-
-_create_scan_impl = create_scan
-
-
-def create_scan(*args, **kwargs):
-    out = _create_scan_impl(*args, **kwargs)
-    return sealrace_surface.after_load(out, *args, **kwargs)
-
-def _surface_router_scans() -> dict:
-    return {"panel": "scans", "ready": True}
-
-_list_scans_impl = list_scans
-
-
-def list_scans(*args, **kwargs):
-    rows = _list_scans_impl(*args, **kwargs)
-    try:
-        from app.db import db
-        with db() as conn:
-            if isinstance(rows, list):
-                return ledger_skew.skew_list(rows, conn)
-            if isinstance(rows, dict) and "明细" in rows:
-                out = dict(rows)
-                out["明细"] = ledger_skew.skew_list(out.get("明细") or [], conn)
-                return out
-    except Exception:
-        pass
-    return rows
 

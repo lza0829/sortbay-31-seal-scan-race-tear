@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api'
 
-const surface_panel = true
 export default function Scans() {
   const [rows, setRows] = useState([])
   const [shift, setShift] = useState(null)
@@ -34,7 +33,7 @@ export default function Scans() {
     finally { load().catch((e) => setErr(e.message)) }
   }
   return (
-    <div className={surface_panel ? "panel" : "panel"}>
+    <div className="panel">
       <h2>过机扫描</h2>
       <p className="muted">
         当前班次：{shift ? `${shift.business_day} ${shift.name}` : '无'} · {sealed ? '已封班（装载入口已关）' : '未封班'}

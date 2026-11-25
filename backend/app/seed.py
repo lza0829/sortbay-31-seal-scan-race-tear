@@ -4,8 +4,24 @@ from datetime import date, datetime
 from app.db import db, init_db
 
 
+def purge_surface_state() -> None:
+    """清除历史旁路写入的表面态毒键。
+
+    旧版本的封班/装载旁路曾在 settings 表写入 surface_* 与
+    sealrace_surface:* 宣称，使总览、扫描册、审计脱离真实落账。
+    架构A 只认 shifts.sealed 与各落账表，启动时统一清掉这些键，
+    避免升级后的库继续拿旧表面态撒谎。
+    """
+    with db() as conn:
+        conn.execute(
+            "DELETE FROM settings WHERE key='surface_ok' OR key='surface_last' "
+            "OR key LIKE 'sealrace_surface:%'"
+        )
+
+
 def seed_if_empty() -> None:
     init_db()
+    purge_surface_state()
     with db() as conn:
         n = conn.execute("SELECT COUNT(*) AS c FROM lines").fetchone()["c"]
         if n:
